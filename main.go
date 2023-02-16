@@ -16,7 +16,7 @@ func main() {
 	}
 
 	c.MaxVisits = 3
-	c.VisitFn = func(u url.URL) {
+	c.VisitFn = func(u url.URL, content string) {
 		log.Printf("visiting %#v", u.String())
 	}
 

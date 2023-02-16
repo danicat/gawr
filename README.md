@@ -2,6 +2,8 @@
 
 GAWR is a web crawler implemented in Go using a breadth first search (BFS) algorithm.
 
+This is roughly based on my previous crawler implementation available [here](https://github.com/danicat/spinarago). Any similarities are not a coincidence :)
+
 ## Usage
 
 TBD

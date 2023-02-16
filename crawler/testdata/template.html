@@ -1,0 +1,12 @@
+<head>
+    <h1>{{.Title}}</h1>
+</head>
+<body>
+    <p>{{.Message}}</p>
+    <h2>links</h2>
+    <ul>
+      {{range .Links}}
+        <li><a href="{{.Link}}">{{.Name}}</a></li>
+      {{end}}
+    </ul>
+</body>

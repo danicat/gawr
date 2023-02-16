@@ -7,9 +7,14 @@ import (
 )
 
 type Crawler struct {
-	queue     Queue[url.URL]
-	visited   map[url.URL]bool
+	queue   Queue[url.URL]
+	visited map[url.URL]bool
+
+	// MaxVisits limits the number of visits the crawler makes in a single run.
+	// The default is zero and it means disabled.
 	MaxVisits int
+
+	// incremented at each visit
 	numVisits int
 
 	// FilterFn is an user provided function to filter which URLs to crawl
@@ -17,7 +22,7 @@ type Crawler struct {
 	FilterFn func(url.URL) bool
 
 	// VisitFn is an user provided function to execute once for each URL crawled
-	VisitFn func(url.URL)
+	VisitFn func(u url.URL, content string)
 }
 
 func NewCrawler(website string) (*Crawler, error) {
@@ -48,7 +53,6 @@ func (c *Crawler) Crawl() error {
 	for !c.queue.IsEmpty() && (c.MaxVisits == 0 || c.numVisits < c.MaxVisits) {
 		website, err := c.queue.Pop()
 		if err != nil {
-			// crash and burn
 			return err
 		}
 
@@ -66,12 +70,12 @@ func (c *Crawler) Visit(u url.URL) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	text, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
 
 	links, err := ExtractLinks(string(text))
 	if err != nil {
@@ -85,7 +89,7 @@ func (c *Crawler) Visit(u url.URL) error {
 	}
 
 	if c.VisitFn != nil {
-		c.VisitFn(u)
+		c.VisitFn(u, string(text))
 	}
 	c.visited[u] = true
 
