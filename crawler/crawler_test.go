@@ -8,6 +8,9 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
+
+	"golang.org/x/time/rate"
 )
 
 type Webpage struct {
@@ -95,7 +98,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestCrawler_HasNoCycles(t *testing.T) {
-	c, err := crawler.NewCrawler("http://localhost:8080")
+	c, err := crawler.NewCrawler("http://localhost:8080", rate.Every(time.Millisecond), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
