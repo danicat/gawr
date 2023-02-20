@@ -1,9 +1,14 @@
 package crawler
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
+	"time"
+
+	"golang.org/x/time/rate"
 )
 
 type Crawler struct {
@@ -13,9 +18,12 @@ type Crawler struct {
 	// MaxVisits limits the number of visits the crawler makes in a single run.
 	// The default is zero and it means disabled.
 	MaxVisits int
-
 	// incremented at each visit
 	numVisits int
+
+	// limiter ensures that we are gentle in crawling pages.
+	// Going too fast might imply in our IP being banned
+	limiter *rate.Limiter
 
 	// FilterFn is an user provided function to filter which URLs to crawl
 	// This function should evaluate to TRUE for URLs that SHOULD be crawled
@@ -25,7 +33,14 @@ type Crawler struct {
 	VisitFn func(u url.URL, content string)
 }
 
-func NewCrawler(website string) (*Crawler, error) {
+// NewCrawler creates a new web crawler that starts at the given website.
+// frequency is the maximum frequency of crawling events
+// concurrency is how many crawling events it can submit at the same time (for most cases it should be 1)
+//
+// See: https://pkg.go.dev/golang.org/x/time/rate#Limit
+//
+// Note: since the current implementation is single threaded,
+func NewCrawler(website string, frequency rate.Limit, concurrency int) (*Crawler, error) {
 	u, err := url.Parse(website)
 	if err != nil {
 		return nil, err
@@ -33,6 +48,7 @@ func NewCrawler(website string) (*Crawler, error) {
 
 	c := Crawler{
 		visited: map[url.URL]bool{},
+		limiter: rate.NewLimiter(frequency, concurrency),
 	}
 
 	c.Push(*u)
@@ -40,17 +56,29 @@ func NewCrawler(website string) (*Crawler, error) {
 }
 
 func (c *Crawler) Push(website url.URL) {
+	// normalize paths to never have the trailing slash
+	website.Path = strings.TrimSuffix(website.Path, "/")
+
 	_, ok := c.visited[website]
 	if ok {
 		// it's already on the list to crawl
 		// don't need to put it again
 		return
 	}
+
 	c.queue.Push(website)
+	c.visited[website] = false
 }
 
 func (c *Crawler) Crawl() error {
 	for !c.queue.IsEmpty() && (c.MaxVisits == 0 || c.numVisits < c.MaxVisits) {
+		r := c.limiter.Reserve()
+		if !r.OK() {
+			// shouldn't happen as long as limiter.burst > 0
+			return errors.New("operation denied by rate limiter")
+		}
+		time.Sleep(r.Delay())
+
 		website, err := c.queue.Pop()
 		if err != nil {
 			return err
