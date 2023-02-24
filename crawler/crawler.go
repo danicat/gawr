@@ -105,7 +105,7 @@ func (c *Crawler) Visit(u url.URL) error {
 		return err
 	}
 
-	links, err := ExtractLinks(string(text))
+	links, err := ExtractLinks(&u, string(text))
 	if err != nil {
 		return err
 	}

@@ -56,7 +56,7 @@ var rootCmd = &cobra.Command{
 
 		c.MaxVisits = viper.GetInt("max-visits")
 		c.VisitFn = func(u url.URL, content string) {
-			links, err := crawler.ExtractLinks(content)
+			links, err := crawler.ExtractLinks(&u, content)
 			if err != nil {
 				log.Println(err)
 				return

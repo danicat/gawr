@@ -9,7 +9,7 @@ import (
 )
 
 // ExtractLinks takes the HTML text of a webpage and returns all links in HREF tags.
-func ExtractLinks(text string) ([]url.URL, error) {
+func ExtractLinks(src *url.URL, text string) ([]url.URL, error) {
 	reader := strings.NewReader(text)
 	tokenizer := html.NewTokenizer(reader)
 
@@ -26,6 +26,10 @@ func ExtractLinks(text string) ([]url.URL, error) {
 						if err != nil {
 							log.Printf("error parsing href tag with value %v: %v", attr.Val, err)
 							continue
+						}
+
+						if !u.IsAbs() && src != nil {
+							u = src.ResolveReference(u)
 						}
 
 						links = append(links, *u)
